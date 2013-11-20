@@ -1,0 +1,19 @@
+---
+locked_files:
+- bin/
+- bin/*
+- tools/
+- tools/*
+- metadata/
+- metadata/*
+- hooks/
+- hooks/*
+- env/
+- env/OPENSHIFT_GATEIN_DIR
+- env/OPENSHIFT_GATEIN_LOG_DIR
+- env/OPENSHIFT_GATEIN_JDK*
+- env/OPENSHIFT_GATEIN_VERSION
+- env/M2_HOME
+processed_templates:
+- 'metadata/jenkins_shell_command.erb'
+- 'metadata/jenkins_artifacts_glob.erb'

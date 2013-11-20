@@ -1,0 +1,21 @@
+#!/bin/bash -eu
+
+case "$1" in
+  -v|--version)
+    version="$2"
+esac
+
+# Checks if gatein-portal is present in node
+if [[ ! -d /usr/share/gatein-portal ]] ; then
+  echo "GateIn Portal not found, GateIn cartridge cannot continue"
+  exit 1
+fi
+
+# Installs gatein-portal on cartridge
+mkdir -p ${OPENSHIFT_GATEIN_DIR}/gatein-portal
+cp -R /usr/share/gatein-portal/{appclient,bin,bundles,docs,domain,gatein,standalone,welcome-content} ${OPENSHIFT_GATEIN_DIR}/gatein-portal
+ln -s /usr/share/gatein-portal/modules ${OPENSHIFT_GATEIN_DIR}/gatein-portal
+ln -s /usr/share/gatein-portal/jboss-modules.jar ${OPENSHIFT_GATEIN_DIR}/gatein-portal
+
+# Installs template
+mkdir -p ${OPENSHIFT_GATEIN_DIR}/template/{deployments,extensions}

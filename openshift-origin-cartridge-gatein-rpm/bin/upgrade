@@ -1,0 +1,7 @@
+#!/bin/bash
+
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+
+jboss_version="$1"
+old_cart_version="$2"
+new_cart_version="$3"

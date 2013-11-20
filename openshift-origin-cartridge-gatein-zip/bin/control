@@ -1,0 +1,314 @@
+#!/bin/bash -e
+
+source $OPENSHIFT_CARTRIDGE_SDK_BASH
+
+cartridge_type="gatein"
+version=3.6
+
+GATEIN_HOME=${OPENSHIFT_GATEIN_DIR}/gatein-portal
+GATEIN_PID_FILE=${OPENSHIFT_HOMEDIR}/app-root/runtime/gatein.pid
+
+# Check if the server http port is up
+function ishttpup() {
+
+  let count=0
+  while [ ${count} -lt 24 ]
+  do
+      if /usr/sbin/lsof -P -n -i "@${OPENSHIFT_GATEIN_IP}:${OPENSHIFT_GATEIN_HTTP_PORT}" | grep "(LISTEN)" > /dev/null; then
+          echo "Found ${OPENSHIFT_GATEIN_IP}:${OPENSHIFT_GATEIN_HTTP_PORT} listening port"
+          return 0
+      fi
+      let count=${count}+1
+
+      sleep 2
+  done
+
+  return 1
+}
+
+# Check if the gatein process is running
+function isrunning() {
+
+    # Check for running app
+    if [ -f "$GATEIN_PID_FILE" ]; then
+      gtnid=$(cat $GATEIN_PID_FILE);
+      if /bin/ps --pid $gtnid 1>&2 >/dev/null;
+      then
+        return 0
+      fi
+      if /bin/ps --ppid $gtnid 1>&2 >/dev/null;
+      then
+        return 0
+      fi    
+    fi
+
+    return 1
+}
+
+function build() {
+
+  echo "Building GateIn Openshift application"
+
+  # Specify the location of the Java home directory.  If set then $JAVA will
+  # be defined to $JAVA_HOME/bin/java, else $JAVA will be "java".
+  #
+  if [ -e ${OPENSHIFT_REPO_DIR}.openshift/markers/java7 ];
+  then
+    JAVA_HOME="/usr/lib/jvm/jre-1.7.0"
+  else
+    JAVA_HOME="/usr/lib/jvm/jre-1.6.0"
+  fi    
+  
+  # Read MAVEN variables
+  if [[ -e ${OPENSHIFT_REPO_DIR}/.openshift/config/maven.conf ]] ; then
+    source ${OPENSHIFT_REPO_DIR}/.openshift/config/maven.conf
+  fi
+  
+  if [[ "x$OPENSHIFT_MAVEN_OPTS" == "x" ]] ; then
+    OPENSHIFT_MAVEN_OPTS="-Xmx64m"    
+  fi
+  
+  if marker_present hot_deploy 
+  then
+    OPENSHIFT_MAVEN_OPTS="-Xmx16m" 
+  fi
+  
+  if [[ "x$OPENSHIFT_MAVEN_ARGS" == "x" ]] ; then
+    OPENSHIFT_MAVEN_ARGS="clean package -Popenshift -DskipTests"
+  fi
+      
+  # Configures MAVEN settings file
+  OPENSHIFT_MAVEN_MIRROR="${OPENSHIFT_REPO_DIR}/.openshift/config/settings.base.xml"
+  if [[ $OPENSHIFT_GEAR_DNS =~ .*\.rhcloud\.com$ ]]
+  then
+    OPENSHIFT_MAVEN_MIRROR="${OPENSHIFT_REPO_DIR}/.openshift/config/settings.rhcloud.xml"
+  fi  
+  
+  if [[ -e ${OPENSHIFT_REPO_DIR}/pom.xml ]] ; then
+    export MAVEN_OPTS="$OPENSHIFT_MAVEN_OPTS"
+    export PATH=$JAVA_HOME/bin:$M2_HOME/bin:$PATH
+    
+    pushd ${OPENSHIFT_REPO_DIR} > /dev/null
+    
+      echo "Found pom.xml... attempting to build with 'mvn -e ${OPENSHIFT_MAVEN_ARGS}'"
+      
+      if [ -n "$OPENSHIFT_MAVEN_MIRROR" ]
+      then
+          mvn --global-settings $OPENSHIFT_MAVEN_MIRROR --version
+          mvn --global-settings $OPENSHIFT_MAVEN_MIRROR $OPENSHIFT_MAVEN_ARGS
+      else
+          mvn --version
+          mvn $OPENSHIFT_MAVEN_ARGS
+      fi            
+      
+    popd > /dev/null    
+  fi
+  
+}
+
+function deploy() {
+
+  echo "Deploying GateIn applications and extensions"   
+
+  # Copies gatein.ear from template into GateIn Portal
+  rsync -a ${OPENSHIFT_REPO_DIR}/.openshift/config/gatein.ear ${OPENSHIFT_GATEIN_DIR}/gatein-portal/gatein 2> /dev/null || echo ".openshift/config/gatein.ear doesnt found" 
+  
+  # Copies deployments
+  if [ -d ${OPENSHIFT_REPO_DIR}/deployments ] ; then
+      rsync -a ${OPENSHIFT_REPO_DIR}/deployments/* ${OPENSHIFT_GATEIN_DIR}/gatein-portal/standalone/deployments 2> /dev/null || echo "deployments/* doesnt found"            
+  fi
+  
+  # Copies extensions
+  if [ -d ${OPENSHIFT_REPO_DIR}/extensions ] ; then
+      rsync -a ${OPENSHIFT_REPO_DIR}/extensions/* ${OPENSHIFT_GATEIN_DIR}/gatein-portal/gatein/extensions 2> /dev/null || echo "extensions/* doesnt found"           
+  fi
+  
+}
+
+function copy_conf() {
+
+  echo "Setting GateIn configuration"
+  
+  # Updates standalone.conf
+  if [ -e ${OPENSHIFT_REPO_DIR}/.openshift/config/standalone.conf ] ; then
+    rsync -a ${OPENSHIFT_REPO_DIR}/.openshift/config/standalone.conf ${OPENSHIFT_GATEIN_DIR}/gatein-portal/bin 2> /dev/null || echo ".openshift/config/standalone.conf doesnt found"
+  fi
+  
+  # Updates configuration folder
+  if [ -d ${OPENSHIFT_REPO_DIR}/.openshift/config/configuration ] ; then
+    rsync -a ${OPENSHIFT_REPO_DIR}/.openshift/config/configuration/* ${OPENSHIFT_GATEIN_DIR}/gatein-portal/standalone/configuration 2> /dev/null || echo ".openshift/config/configuration/* doesnt found" 
+  fi
+}
+
+# Verify that the deployment scanner has finished running
+function waitondeployments() {
+
+  local isdeploying=1
+  
+  while [ $isdeploying -gt 0 ] ; do
+    isdeploying=$(ls ${OPENSHIFT_GATEIN_DIR}/gatein-portal/standalone/deployments | grep .isdeploying | wc -l)
+    sleep 1  
+  done
+  
+  failed=$(ls ${OPENSHIFT_GATEIN_DIR}/gatein-portal/standalone/deployments | grep .failed | wc -l)
+  
+  if [[ $failed -gt 0 ]]; then
+    failed_deployments=$(ls ${OPENSHIFT_GATEIN_DIR}/gatein-portal/standalone/deployments | grep .failed)
+    client_message ""Failed deployments: ${failed_deployments}""
+    exit 1
+  fi
+  
+  exit 0
+}
+
+function start() {
+    
+  copy_conf
+  
+  echo "Starting $cartridge_type cart"
+  
+  if marker_present "enable_jpda"
+  then
+    export ENABLE_JPDA=1
+  fi
+
+  # Check for running app
+  if isrunning; then
+      echo "Application is already running"
+  else    
+    ${GATEIN_HOME}/bin/standalone.sh > ${OPENSHIFT_TMP_DIR}/${cartridge_type}.log 2>&1 &
+    PROCESS_ID=$!
+    echo "$PROCESS_ID" > ${GATEIN_PID_FILE}
+
+    if ! ishttpup; then
+        echo "Timed out waiting for http listening port"
+        exit 1
+    fi
+
+    # GateIn takes some time, so waitondeployments commented
+    # waitondeployments    
+  fi
+}
+
+# Kill the process given by $1 and its children
+killtree() {
+
+  local _pid=$1
+  for _child in $(ps -o pid --no-headers --ppid ${_pid}); do
+      killtree ${_child}
+  done
+
+  local should_be_gone_pid=$(ps -o pid -p ${_pid} --no-headers)
+  if [ -z "$should_be_gone_pid" ]; then
+      return
+  else
+      kill -TERM ${_pid}
+  fi
+
+  local count=0
+  while [ ${count} -lt 15 ]
+  do
+      local should_be_gone_pid=$(ps -o pid -p ${_pid} --no-headers)
+      if [ -z "$should_be_gone_pid" ]; then
+              return
+      else
+              sleep 2
+              let count=${count}+1
+      fi
+  done
+
+  local should_be_gone_pid=$(ps -o pid -p ${_pid} --no-headers)
+  if [ ! -z $should_be_gone_pid ]
+  then
+      kill -9 ${_pid}
+  fi
+}
+
+function stop() {
+
+  echo "Stopping $cartridge_type cart"
+
+  if isrunning; then
+    if [ -f "$GATEIN_PID_FILE" ]; then
+      pid=$(cat $GATEIN_PID_FILE);
+      echo "Sending SIGTERM to jboss:$pid ..." 1>&2
+      killtree $pid
+    else
+      echo "Failed to locate GATEIN PID File" 1>&2
+    fi
+  fi
+}
+
+function restart() {
+
+  echo "Restarting $cartridge_type cart"
+  
+  stop
+  
+  start
+}
+
+function status() {
+
+  if isrunning
+  then
+    echo "Application is running"
+  else
+    echo "Application is either stopped or inaccessible"
+  fi   
+}
+
+function reload() {
+
+  echo "Reloading $cartridge_type cart"
+  restart 
+}
+
+# Clean up any log files
+function tidy() {
+
+  echo "Cleaning $cartridge_type cart"
+  echo "Warning: temporary data will be delete from GateIn Portal"
+  
+  stop
+  
+  # Deleting data, temp and log files
+  rm -Rf $OPENSHIFT_GATEIN_DIR/gatein-portal/standalone/data 
+  rm -Rf $OPENSHIFT_GATEIN_DIR/gatein-portal/standalone/tmp 
+  rm -Rf $OPENSHIFT_GATEIN_DIR/gatein-portal/standalone/log  
+  
+  start
+}
+
+function threaddump() {
+
+  echo "Thread dump for $cartridge_type cart"
+
+  if ! isrunning; then
+      echo "Application is stopped"
+      exit 1
+  elif [ -f "$GATEIN_PID_FILE" ]; then
+      pid=$(cat $GATEIN_PID_FILE);
+      java_pid=$(ps h --ppid $pid -o '%p')
+      kill -3 $java_pid
+      client_result "Success"
+      client_result ""
+      client_result "The thread dump file will be available via: rhc tail $OPENSHIFT_APP_NAME -f ${OPENSHIFT_TMP_DIR}${cartridge_type}.log -o '-n 250'"
+  else 
+      echo "Failed to locate GATEIN PID File"
+  fi  
+}
+
+case "$1" in
+
+  build)        build ;;
+  deploy)       deploy ;;
+  start)        start ;;
+  stop)         stop ;;
+  restart)      restart ;;
+  status)       status ;;
+  reload)       reload ;;
+  tidy)         tidy ;;
+  threaddump)   threaddump ;;
+  *)            exit 0
+esac

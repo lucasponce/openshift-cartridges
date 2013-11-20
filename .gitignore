@@ -1,0 +1,14 @@
+target
+.idea
+*.iml
+*.ipr
+*.iws
+*.kate-swp
+.project
+.classpath
+.settings
+.metadata
+.directory
+examples/templates-example/images
+old
+ 
