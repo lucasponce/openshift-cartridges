@@ -21,6 +21,17 @@ if [[ ! -d /usr/share/gatein-portal ]] ; then
   mv /usr/share/GateIn-3.6.0.Final-jbossas7 /usr/share/gatein-portal
 fi
 
+# Check if there is a jboss-as installation with mysql and postgresql drivers installed
+# Not needed, only will fail if GateIn cartridge wants to use a database cartridge
+if [[ -d /usr/share/jboss-as/modules/org/postgresql ]] ; then
+  mkdir -p /usr/share/gatein-portal/modules/org/postgresql
+  cp -R /usr/share/jboss-as/modules/org/postgresql/jdbc /usr/share/gatein-portal/modules/org/postgresql
+fi
+if [[ -d /usr/share/jboss-as/modules/com/mysql ]] ; then
+  mkdir -p /usr/share/gatein-portal/modules/com/mysql
+  cp -R /usr/share/jboss-as/modules/com/mysql/jdbc /usr/share/gatein-portal/modules/com/mysql
+fi
+
 # Configure new cartridge and clean cache
 oo-admin-cartridge -a install -s /usr/libexec/openshift/cartridges/gatein
 oo-admin-broker-cache --console

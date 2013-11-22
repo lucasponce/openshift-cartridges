@@ -104,7 +104,8 @@
                         <user-name>sa</user-name>
                         <password>sa</password>
                     </security>
-                </datasource>
+                </datasource>                
+                <!-- Enabled H2__ -->
                 <datasource jndi-name="java:/jdbcidm_portal" pool-name="IDMPortalDS" enabled="true" use-java-context="true">
                     <connection-url>jdbc:h2:file:${jboss.server.data.dir}/gatein/portal/jdbcidm_portal;DB_CLOSE_DELAY=-1</connection-url>
                     <driver>h2</driver>
@@ -121,6 +122,74 @@
                         <password>sa</password>
                     </security>
                 </datasource>
+                <!-- __H2 -->
+
+                <!-- MYSQL__
+                <datasource jndi-name="java:/jdbcidm_portal" pool-name="IDMPortalDS" enabled="true" use-java-context="true" use-ccm="true">
+                    <connection-url>jdbc:mysql://${env.OPENSHIFT_MYSQL_DB_HOST}:${env.OPENSHIFT_MYSQL_DB_PORT}/${env.OPENSHIFT_APP_NAME}</connection-url>
+                    <driver>mysql</driver>
+                    <security>
+                      <user-name>${env.OPENSHIFT_MYSQL_DB_USERNAME}</user-name>
+                      <password>${env.OPENSHIFT_MYSQL_DB_PASSWORD}</password>
+                    </security>
+                    <validation>
+                      <check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
+                      <background-validation>true</background-validation>
+                    </validation>
+                    <pool>
+                      <flush-strategy>IdleConnections</flush-strategy>
+                    </pool>
+                </datasource>
+                <datasource jndi-name="java:/jdbcjcr_portal" pool-name="JCRPortalDS" enabled="true" use-java-context="true" use-ccm="true">
+                    <connection-url>jdbc:mysql://${env.OPENSHIFT_MYSQL_DB_HOST}:${env.OPENSHIFT_MYSQL_DB_PORT}/${env.OPENSHIFT_APP_NAME}</connection-url>
+                    <driver>mysql</driver>
+                    <security>
+                      <user-name>${env.OPENSHIFT_MYSQL_DB_USERNAME}</user-name>
+                      <password>${env.OPENSHIFT_MYSQL_DB_PASSWORD}</password>
+                    </security>
+                    <validation>
+                      <check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
+                      <background-validation>true</background-validation>
+                    </validation>
+                    <pool>
+                      <flush-strategy>IdleConnections</flush-strategy>
+                    </pool>
+                </datasource>
+                __MYSQL -->                
+
+                <!-- POSTGRESQL__
+                <datasource jndi-name="java:/jdbcidm_portal" pool-name="IDMPortalDS" enabled="true" use-java-context="true" use-ccm="true">
+                    <connection-url>jdbc:postgresql://${env.OPENSHIFT_POSTGRESQL_DB_HOST}:${env.OPENSHIFT_POSTGRESQL_DB_PORT}/${env.OPENSHIFT_APP_NAME}</connection-url>
+                    <driver>postgresql</driver>
+                    <security>
+                      <user-name>${env.OPENSHIFT_POSTGRESQL_DB_USERNAME}</user-name>
+                      <password>${env.OPENSHIFT_POSTGRESQL_DB_PASSWORD}</password>
+                    </security>
+                    <validation>
+                      <check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
+                      <background-validation>true</background-validation>
+                    </validation>
+                    <pool>
+                      <flush-strategy>IdleConnections</flush-strategy>
+                    </pool>
+                </datasource>
+                <datasource jndi-name="java:/jdbcjcr_portal" pool-name="JCRPortalDS" enabled="true" use-java-context="true" use-ccm="true">
+                    <connection-url>jdbc:postgresql://${env.OPENSHIFT_POSTGRESQL_DB_HOST}:${env.OPENSHIFT_POSTGRESQL_DB_PORT}/${env.OPENSHIFT_APP_NAME}</connection-url>
+                    <driver>postgresql</driver>
+                    <security>
+                      <user-name>${env.OPENSHIFT_POSTGRESQL_DB_USERNAME}</user-name>
+                      <password>${env.OPENSHIFT_POSTGRESQL_DB_PASSWORD}</password>
+                    </security>
+                    <validation>
+                      <check-valid-connection-sql>SELECT 1</check-valid-connection-sql>
+                      <background-validation>true</background-validation>
+                    </validation>
+                    <pool>
+                      <flush-strategy>IdleConnections</flush-strategy>
+                    </pool>
+                </datasource>
+                __POSTGRESQL -->                     
+                
                 <!-- Uncommented this when deploying gatein-sample-portal -->
                 <!--
                 <datasource jndi-name="java:/jdbcidm_sample-portal" pool-name="IDMSamplePortalDS" enabled="true" use-java-context="true">
@@ -147,6 +216,16 @@
                     <driver name="h2" module="com.h2database.h2">
                         <xa-datasource-class>org.h2.jdbcx.JdbcDataSource</xa-datasource-class>
                     </driver>
+                    <!-- MYSQL__
+                    <driver name="mysql" module="com.mysql.jdbc">
+                        <xa-datasource-class>com.mysql.jdbc.jdbc2.optional.MysqlXADataSource</xa-datasource-class>
+                    </driver>
+                    __MYSQL -->
+                    <!-- POSTGRESQL__
+                    <driver name="postgresql" module="org.postgresql.jdbc">
+                        <xa-datasource-class>org.postgresql.xa.PGXADataSource</xa-datasource-class>
+                    </driver>       
+                    __POSTGRESQL -->
                 </drivers>
             </datasources>
         </subsystem>

@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 source $OPENSHIFT_CARTRIDGE_SDK_BASH
 
