@@ -30,6 +30,17 @@ rm -Rf ${OPENSHIFT_GATEIN_DIR}/template/.openshift/config/gatein.ear.toinstall
 # Copies gatein.ear from template into GateIn Portal
 rsync -a ${OPENSHIFT_GATEIN_DIR}/template/.openshift/config/gatein.ear ${OPENSHIFT_GATEIN_DIR}/gatein-portal/gatein
 
+# Add scalability variables
+if [ -z "${OPENSHIFT_GATEIN_CLUSTER_PROXY_PORT}" ]; then
+        export OPENSHIFT_GATEIN_CLUSTER_PROXY_PORT=7600
+fi
+
+if [ -z "${OPENSHIFT_GATEIN_CLUSTER}" ]; then
+        export OPENSHIFT_GATEIN_CLUSTER="${OPENSHIFT_GATEIN_IP}[${OPENSHIFT_GATEIN_CLUSTER_PORT}]"
+fi
+
+echo "${OPENSHIFT_GATEIN_CLUSTER}" > ${OPENSHIFT_GATEIN_DIR}/env/OPENSHIFT_GATEIN_CLUSTER
+
 # Creates and installs first ROOT.war application
 echo "Building first GateIn Openshift application"
 

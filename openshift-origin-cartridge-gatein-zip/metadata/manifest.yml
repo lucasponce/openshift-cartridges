@@ -62,6 +62,8 @@ Publishes:
     Type: "NET_TCP:httpd-proxy-info"
   publish-gear-endpoint:
     Type: "NET_TCP:gear-endpoint-info"
+  publish-gatein-cluster:
+    Type: "NET_TCP:gatein-cluster-info"
 Subscribes:
   set-env:
     Type: "ENV:*"
@@ -77,6 +79,8 @@ Subscribes:
     Required : false
   set-generic-java:
     Type: "ENV:NET_TCP:generic-java"
+  set-gatein-cluster:
+    Type: "NET_TCP:gatein-cluster-info"
 Scaling:
   Min: 1
   Max: -1

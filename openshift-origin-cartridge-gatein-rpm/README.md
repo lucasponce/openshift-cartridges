@@ -1,5 +1,5 @@
-Experimental OpenShift GateIn Portal Cartridge - RPM version
-============================================================
+OpenShift Origin GateIn Cartridge - RPM version
+===============================================
 
 Version 0.0.1
 

@@ -1,5 +1,5 @@
-Experimental OpenShift GateIn Portal Cartridge - ZIP version
-============================================================
+OpenShift Origin GateIn Cartridge - ZIP version
+===============================================
 
 Version 0.0.2
 
